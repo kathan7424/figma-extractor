@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="gu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FTE Studio Guide</title>
+<style>
+  :root { --bg:#f5f5f2; --card:#ffffff; --text:#1c1c1a; --muted:#66665f; --line:#e1e1db; --accent:#2457d6; --ok:#1d7a3a; --warn:#a35a00; --code:#f0f0ec; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#141413; --card:#1e1e1c; --text:#ececea; --muted:#a3a39d; --line:#33332f; --accent:#86a8ff; --ok:#62d184; --warn:#f0a35e; --code:#262624; } }
+  :root[data-theme="dark"] { --bg:#141413; --card:#1e1e1c; --text:#ececea; --muted:#a3a39d; --line:#33332f; --accent:#86a8ff; --ok:#62d184; --warn:#f0a35e; --code:#262624; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.6 system-ui, "Segoe UI", sans-serif; }
+  main { max-width:980px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:26px; margin:0 0 4px; } h2 { font-size:19px; margin:34px 0 10px; } h3 { font-size:15px; margin:0 0 6px; }
+  .sub { color:var(--muted); margin:0 0 18px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin:12px 0; }
+  .flow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .node { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:8px 12px; font-weight:600; }
+  .arrow { color:var(--muted); }
+  .steps { counter-reset:s; display:grid; gap:12px; }
+  .step { counter-increment:s; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 14px 14px 58px; position:relative; }
+  .step::before { content:counter(s); position:absolute; left:14px; top:14px; width:30px; height:30px; border-radius:50%; background:var(--accent); color:#fff; display:grid; place-items:center; font-weight:700; }
+  .step label { display:flex; gap:8px; align-items:center; font-weight:600; cursor:pointer; }
+  .step input[type=checkbox] { width:18px; height:18px; }
+  .step.done { opacity:.62; }
+  pre { background:var(--code); border-radius:8px; padding:10px 12px; overflow:auto; margin:8px 0; position:relative; font:13px/1.5 Consolas, monospace; }
+  pre button { position:absolute; top:6px; right:6px; font:12px system-ui; border:1px solid var(--line); background:var(--card); color:var(--text); border-radius:6px; padding:2px 8px; cursor:pointer; }
+  .see { color:var(--ok); font-size:14px; } .warnc { color:var(--warn); }
+  table { width:100%; border-collapse:collapse; font-size:14px; } td, th { text-align:left; padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .bar { height:10px; background:var(--line); border-radius:5px; overflow:hidden; } .bar i { display:block; height:100%; background:var(--ok); }
+  .progress { display:flex; gap:10px; align-items:center; font-size:14px; color:var(--muted); }
+  .progress .bar { flex:1; }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; } .tabs button { border:1px solid var(--line); background:var(--card); color:var(--text); border-radius:20px; padding:4px 12px; cursor:pointer; } .tabs button.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .muted { color:var(--muted); }
+  @media (max-width:600px) { .step { padding-left:50px; } .step::before { left:10px; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>FTE Studio</h1>
+  <p class="sub">Figma &rarr; exact HTML/CSS &rarr; native Elementor (ACF PRO + Elementor PRO) &rarr; WordPress. Badhu free, tamara PC par. DeveloperAI skill na rules follow kare che.</p>
+
+  <div class="card">
+    <h3>Kem kaam kare che</h3>
+    <div class="flow">
+      <span class="node">.fig file / Figma plugin zip</span><span class="arrow">&rarr;</span>
+      <span class="node">JSON + assets (free, offline)</span><span class="arrow">&rarr;</span>
+      <span class="node">Exact HTML/CSS</span><span class="arrow">&rarr;</span>
+      <span class="node">Native Elementor + Global styles</span><span class="arrow">&rarr;</span>
+      <span class="node">WordPress (helper plugin)</span><span class="arrow">&rarr;</span>
+      <span class="node">Accuracy check</span>
+    </div>
+    <p class="muted" style="margin:10px 0 0">Claude ne MCP thi jodi shakay: ek j tool <code>fte_make</code> badhu kare ane 6&ndash;8 line nu result aape (ocha tokens). Claude pachhi fakt polish/enhancement kare.</p>
+  </div>
+
+  <div class="progress"><span id="ptext">0 / 0 steps</span><div class="bar"><i id="pbar" style="width:0"></i></div><button id="reset" style="border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:6px;padding:2px 8px;cursor:pointer">Reset</button></div>
+
+  <h2>1. Setup (ek j vaar, ~5 min)</h2>
+  <div class="steps" data-group="setup">
+    <div class="step"><label><input type="checkbox"> Python 3.14 install karo</label>
+      <p>python.org &rarr; Download Python 3.14 &rarr; installer ma <b>"Add python.exe to PATH"</b> tick karo. (.fig file vanchva 3.14 joiye.)</p></div>
+    <div class="step"><label><input type="checkbox"> <code>Setup.bat</code> double-click karo</label>
+      <p>Aa Pillow + Playwright install kare ane check chalave. Koi PowerShell command type karvani nathi.</p>
+      <p class="see">Dekhase: <code>OK Python</code>, <code>OK Pillow</code>, <code>OK Browser...</code>, <code>READY</code></p></div>
+    <div class="step"><label><input type="checkbox"> WordPress par helper plugin</label>
+      <p>Studio app &rarr; <b>2. WordPress</b> tab &rarr; <b>Make helper plugin zip</b>. WP Admin &rarr; Plugins &rarr; Add New &rarr; Upload &rarr; <b>FTE Studio Bridge</b> Activate. Elementor, Elementor Pro ane ACF PRO active hova joiye.</p></div>
+    <div class="step"><label><input type="checkbox"> Application Password banavo</label>
+      <p>WP Admin &rarr; Users &rarr; Profile &rarr; <b>Application Passwords</b> &rarr; name "FTE Studio" &rarr; Add. Aa password Studio app ma j nakho; app te save nathi kartu. <span class="warnc">Pela staging site par vapro. Kaam puru thay pachhi revoke karo.</span></p></div>
+  </div>
+
+  <h2>Fakt extraction (WordPress vagar)</h2>
+  <div class="card">
+    <p>Desktop app &rarr; <b>1. Design</b> &rarr; <b>Extract only: HTML/CSS + design JSON + assets</b>. Output folder ma:</p>
+    <table>
+      <tr><td><code>html/</code></td><td>exact HTML + CSS dar frame mate (<code>index.html</code> = gallery)</td></tr>
+      <tr><td><code>pages/</code></td><td>dar frame ni design JSON (layout, colours, text, auto-layout)</td></tr>
+      <tr><td><code>tokens.json / tokens.css</code></td><td>colours, typography</td></tr>
+      <tr><td><code>assets/</code></td><td>original images (full quality), SVG icons</td></tr>
+      <tr><td><code>figma-extract.zip</code></td><td>upar nu badhu ek file ma</td></tr>
+    </table>
+    <pre><button>Copy</button>.venv\Scripts\python.exe studio.py extract "C:\Users\HP\Downloads\Buell Client.fig" -o F:\exports\buell --pages "Desktop Layout (Final)" --fonts F:\fonts</pre>
+  </div>
+
+  <h2>2. Roj no upyog (desktop app)</h2>
+  <div class="steps" data-group="use">
+    <div class="step"><label><input type="checkbox"> <code>Studio.bat</code> kholo &rarr; <b>1. Design</b></label>
+      <p>Figma file (.fig) ke Figma plugin ni zip, Output folder ane (optional) Fonts folder select karo &rarr; <b>Import design</b>. Frames ni list aavse; double-click = exact HTML preview.</p></div>
+    <div class="step"><label><input type="checkbox"> <b>2. WordPress</b> &rarr; URL, username, Application Password &rarr; <b>Test connection</b></label>
+      <p class="see">Dekhase: "Connected. WordPress 7.x &middot; Elementor 4.x &middot; Pro 3.x &middot; ACF 6.x". Pro detect thay to "Elementor Pro installed" auto tick thase.</p></div>
+    <div class="step"><label><input type="checkbox"> <b>3. Build</b> &rarr; frame select &rarr; <b>Build + send to WordPress</b></label>
+      <p>Global Colors/Typography Kit ma, images WebP Media Library ma (ek j vaar), page native widgets thi. Pro hoy to Header/Footer Theme Builder ma ane repeated cards Loop Grid + ACF fields + posts.</p></div>
+    <div class="step"><label><input type="checkbox"> <b>Check accuracy</b></label>
+      <p>Live page ne exact HTML sathe pixel-compare kare: tolerant % ane strict %, ane diff image (laal = farak).</p></div>
+  </div>
+
+  <h2>3. Claude sathe (MCP)</h2>
+  <div class="card">
+    <p>Claude Code ma (ek vaar). Password env ma rahe che, chat ma nahi:</p>
+    <pre><button>Copy</button>claude mcp add fte-studio -e FTE_WP_URL=https://staging.example.com -e FTE_WP_USER=admin -e FTE_WP_PASS="xxxx xxxx xxxx xxxx" -- F:\figma-to-elementor-latest\studio\.venv\Scripts\python.exe F:\figma-to-elementor-latest\studio\core\mcp_server.py</pre>
+    <p>Pachhi Claude ne kaho:</p>
+    <ul>
+      <li><i>"fte_extract thi Buell Client.fig extract karo F:\exports\buell ma"</i> &rarr; fakt HTML/CSS + JSON + assets</li>
+      <li><i>"fte_make_site thi F:\exports\buell ni aakhi site WordPress par banavo, pro=true"</i> &rarr; badha desktop frames pages bane, Home front page, Main Menu</li>
+      <li><i>"fte_make thi Home frame banavo ane accuracy kaho"</i> &rarr; ek page + accuracy</li>
+    </ul>
+    <p>Dar tool 4&ndash;8 line nu result aape (ocha tokens). Polish mate: <code>fte_compare</code>, <code>fte_frame_brief</code>.</p>
+  </div>
+
+  <h2>4. Testing</h2>
+  <div class="tabs" id="ttabs"><button class="on" data-t="t1">App thi</button><button data-t="t2">Command thi</button><button data-t="t3">Badha tests</button></div>
+  <div class="card" id="t1"><p>Studio app &rarr; Build + send &rarr; <b>Check accuracy</b>. Diff image folder ma (<code>&lt;output&gt;\_compare\diff.png</code>).</p></div>
+  <div class="card" id="t2" hidden>
+    <pre><button>Copy</button>.venv\Scripts\python.exe studio.py make "C:\Users\HP\Downloads\Buell Client.fig" -o F:\exports\buell --frame "01 Home" --push --fonts F:\fonts</pre>
+    <p class="see">Dekhase (6 line): Elementor counts, Page link, Editor link, <b>Accuracy vs exact HTML: xx% (tolerant) / xx% (strict)</b>.</p>
+  </div>
+  <div class="card" id="t3" hidden>
+    <pre><button>Copy</button>.venv\Scripts\python.exe tests\run_tests.py</pre>
+    <p>Compile, Elementor build, dynamic ACF/CPT + skill checks (test WordPress chalu hoy to), MCP. <span class="see">Dekhase: "N/N passed".</span></p>
+  </div>
+
+  <h2>5. Sachi accuracy (measured, 2026-11-26)</h2>
+  <div class="card">
+    <table>
+      <tr><th>Shu</th><th>Result</th><th></th></tr>
+      <tr><td>Real file: Buell Client.fig (671 MB) &rarr; extraction</td><td>204 frames, 11.7k nodes, 2.4k SVG, 141 images, ~35 sec</td><td>visually checked</td></tr>
+      <tr><td>Elementor (pixel-exact mode) vs exact HTML, Home page 1920&times;9721</td><td><b>96.86%</b> tolerant / 95.09% strict; 12/12 sections exact position &amp; height</td><td><div class="bar"><i style="width:96.86%"></i></div></td></tr>
+      <tr><td>Elementor (responsive mode) vs exact HTML</td><td>48% tolerant (layout inferred, editable flow)</td><td><div class="bar"><i style="width:48%"></i></div></td></tr>
+      <tr><td>HTML vs <b>Figma's own render</b></td><td class="warnc">Haju measure nathi: Figma Desktop aa PC par nathi. Figma ma frame &rarr; Export PNG 1x karo, pachhi verify chalavo.</td><td></td></tr>
+      <tr><td>Elementor Pro / Theme Builder / Loop Grid</td><td class="warnc">JSON banave che, Pro site par haju test nathi thayu</td><td></td></tr>
+    </table>
+    <p class="muted">100% pixel: browser ane Figma na text rendering ma 0.5&ndash;1% farak normal che. Pixel-exact mode desktop width mate che (fixed layout); mobile mate responsive mode ke Figma na mobile frames joiye.</p>
+  </div>
+
+  <h2>6. Problems</h2>
+  <div class="card"><table>
+    <tr><td>"Python nathi malyu"</td><td>Python 3.14 install karo, "Add to PATH" tick.</td></tr>
+    <tr><td>Connection fail (401)</td><td>Application Password pharithi copy karo; username sachu; helper plugin active.</td></tr>
+    <tr><td>Font alag lage</td><td>Fonts folder aapo (otf/ttf/woff2). Plugin @font-face banave che.</td></tr>
+    <tr><td>Images upload dhima</td><td>Pela run ma j; pachhi media cache thi skip thay (skill 140).</td></tr>
+  </table></div>
+</main>
+<script>
+  (function () {
+    var KEY = 'fte-guide-v1', state = {};
+    try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.step input[type=checkbox]'));
+    function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+    function update() {
+      var done = 0;
+      boxes.forEach(function (b, i) { b.closest('.step').classList.toggle('done', b.checked); if (b.checked) done++; });
+      document.getElementById('ptext').textContent = done + ' / ' + boxes.length + ' steps';
+      document.getElementById('pbar').style.width = (100 * done / boxes.length) + '%';
+    }
+    boxes.forEach(function (b, i) { b.checked = !!state[i]; b.addEventListener('change', function () { state[i] = b.checked; save(); update(); }); });
+    document.getElementById('reset').onclick = function () { state = {}; save(); boxes.forEach(function (b) { b.checked = false; }); update(); };
+    update();
+    document.querySelectorAll('pre button').forEach(function (btn) {
+      btn.onclick = function () {
+        var txt = btn.parentElement.textContent.replace(/^Copy/, '').trim();
+        (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1200); }, function () { btn.textContent = 'Select + Ctrl+C'; });
+      };
+    });
+    document.querySelectorAll('#ttabs button').forEach(function (b) {
+      b.onclick = function () {
+        document.querySelectorAll('#ttabs button').forEach(function (x) { x.classList.toggle('on', x === b); });
+        ['t1', 't2', 't3'].forEach(function (id) { document.getElementById(id).hidden = id !== b.dataset.t; });
+      };
+    });
+  })();
+</script>
+</body>
+</html>

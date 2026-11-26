@@ -1,0 +1,204 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 12px/1.45 Inter, system-ui, sans-serif; margin: 0; padding: 14px; color: var(--figma-color-text, #222); background: var(--figma-color-bg, #fff); }
+  h1 { font-size: 14px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 12px; color: var(--figma-color-text-secondary, #666); }
+  fieldset { border: 1px solid var(--figma-color-border, #ddd); border-radius: 6px; padding: 8px 10px; margin: 0 0 10px; }
+  legend { padding: 0 4px; font-weight: 600; }
+  label { display: block; margin: 4px 0; cursor: pointer; }
+  button { width: 100%; padding: 9px; border: 0; border-radius: 6px; font-weight: 600; cursor: pointer;
+    background: var(--figma-color-bg-brand, #0d99ff); color: var(--figma-color-text-onbrand, #fff); }
+  button:disabled { opacity: .5; cursor: default; }
+  #status { margin-top: 10px; min-height: 18px; }
+  #warn { margin-top: 6px; max-height: 110px; overflow: auto; color: var(--figma-color-text-warning, #b26b00); white-space: pre-wrap; }
+  .bar { height: 4px; background: var(--figma-color-border, #eee); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--figma-color-bg-brand, #0d99ff); transition: width .2s; }
+</style>
+</head>
+<body>
+  <h1>Figma Export Kit</h1>
+  <p class="sub">JSON + assets + renders, ek .zip ma. Pachhi desktop tool thi HTML/CSS ane Elementor.</p>
+
+  <fieldset>
+    <legend>Scope</legend>
+    <label><input type="radio" name="scope" value="selection" checked> Selected frames</label>
+    <label><input type="radio" name="scope" value="page"> Current page (badha top frames)</label>
+    <label><input type="radio" name="scope" value="all"> Aakhi file (badha pages)</label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Options</legend>
+    <label><input type="checkbox" id="renders" checked> Frame renders (PNG) – accuracy check mate jaruri</label>
+    <label>Render scale <select id="rscale"><option value="1">1x</option><option value="2" selected>2x (sharp)</option></select></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Output</legend>
+    <label><input type="radio" name="out" value="zip" checked> .zip download</label>
+    <label><input type="radio" name="out" value="live"> Live send to desktop app (big files, fast)</label>
+    <label id="tokrow" style="display:none">Token <input id="token" size="14" placeholder="desktop app ma thi"></label>
+  </fieldset>
+
+  <button id="go">Export .zip</button>
+  <div class="bar"><i id="bar"></i></div>
+  <div id="status"></div>
+  <div id="warn"></div>
+
+<script>
+  // ---------- minimal ZIP writer (store, no compression, no external libs) ----------
+  var CRC_TABLE = (function () {
+    var t = new Uint32Array(256);
+    for (var n = 0; n < 256; n++) {
+      var c = n;
+      for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+  function crc32(b) {
+    var c = 0xFFFFFFFF;
+    for (var i = 0; i < b.length; i++) c = CRC_TABLE[(c ^ b[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+  function dosDateTime(d) {
+    var time = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+    var date = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+    return { time: time, date: date };
+  }
+  function makeZip(entries) {
+    var enc = new TextEncoder();
+    var parts = [], central = [], offset = 0;
+    var dt = dosDateTime(new Date());
+    for (var i = 0; i < entries.length; i++) {
+      var e = entries[i];
+      var name = enc.encode(e.name);
+      var crc = crc32(e.data), size = e.data.length;
+      var lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
+      lh.setUint16(8, 0, true); lh.setUint16(10, dt.time, true); lh.setUint16(12, dt.date, true);
+      lh.setUint32(14, crc, true); lh.setUint32(18, size, true); lh.setUint32(22, size, true);
+      lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+      parts.push(new Uint8Array(lh.buffer), name, e.data);
+      var ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true);
+      ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true); ch.setUint16(12, dt.time, true); ch.setUint16(14, dt.date, true);
+      ch.setUint32(16, crc, true); ch.setUint32(20, size, true); ch.setUint32(24, size, true);
+      ch.setUint16(28, name.length, true); ch.setUint16(30, 0, true); ch.setUint16(32, 0, true);
+      ch.setUint16(34, 0, true); ch.setUint16(36, 0, true); ch.setUint32(38, 0, true); ch.setUint32(42, offset, true);
+      central.push(new Uint8Array(ch.buffer), name);
+      offset += 30 + name.length + size;
+    }
+    var cdSize = 0;
+    for (var j = 0; j < central.length; j++) cdSize += central[j].length;
+    var end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(4, 0, true); end.setUint16(6, 0, true);
+    end.setUint16(8, entries.length, true); end.setUint16(10, entries.length, true);
+    end.setUint32(12, cdSize, true); end.setUint32(16, offset, true); end.setUint16(20, 0, true);
+    return new Blob(parts.concat(central, [new Uint8Array(end.buffer)]), { type: 'application/zip' });
+  }
+
+  // ---------- UI ----------
+  var files = [];
+  var enc = new TextEncoder();
+  var go = document.getElementById('go');
+  var status = document.getElementById('status');
+  var warn = document.getElementById('warn');
+  var bar = document.getElementById('bar');
+
+  var ws = null, sent = 0, live = false;
+  var tokrow = document.getElementById('tokrow');
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=out]'), function (r) {
+    r.onchange = function () { tokrow.style.display = document.querySelector('input[name=out]:checked').value === 'live' ? 'block' : 'none'; };
+  });
+
+  function startExport() {
+    var scope = document.querySelector('input[name=scope]:checked').value;
+    parent.postMessage({ pluginMessage: { type: 'export', scope: scope,
+      renders: document.getElementById('renders').checked,
+      renderScale: parseInt(document.getElementById('rscale').value, 10) } }, '*');
+  }
+
+  go.onclick = function () {
+    files = [];
+    sent = 0;
+    warn.textContent = '';
+    bar.style.width = '5%';
+    go.disabled = true;
+    status.textContent = 'Starting...';
+    live = document.querySelector('input[name=out]:checked').value === 'live';
+    if (!live) { startExport(); return; }
+    try { ws = new WebSocket('ws://localhost:8787'); } catch (e) { fail('WebSocket open na thayu: ' + e); return; }
+    ws.binaryType = 'arraybuffer';
+    ws.onopen = function () {
+      ws.send(JSON.stringify({ type: 'hello', token: document.getElementById('token').value.trim() }));
+      startExport();
+    };
+    ws.onerror = function () { fail('Desktop app (Live receive) chalu nathi? Port 8787.'); };
+    ws.onclose = function () { if (go.disabled && live && sent === 0) fail('Connection band thayu (token khotu hoy shake).'); };
+  };
+
+  function fail(t) {
+    status.textContent = 'Error: ' + t;
+    go.disabled = false;
+    bar.style.width = '0';
+    parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*');
+  }
+
+  function sendLive(path, data) {
+    var head = enc.encode(JSON.stringify({ path: path }));
+    var buf = new Uint8Array(4 + head.length + data.length);
+    new DataView(buf.buffer).setUint32(0, head.length);
+    buf.set(head, 4);
+    buf.set(data, 4 + head.length);
+    ws.send(buf.buffer);
+    sent++;
+  }
+
+  window.onmessage = function (ev) {
+    var msg = ev.data.pluginMessage;
+    if (!msg) return;
+    if (msg.type === 'file') {
+      var data = typeof msg.data === 'string' ? enc.encode(msg.data) : new Uint8Array(msg.data);
+      if (live) {
+        sendLive(msg.path, data);
+        status.textContent = 'Sending ' + sent + ' files...';
+        return;
+      }
+      files.push({ name: msg.path, data: data });
+      bar.style.width = Math.min(90, 5 + files.length) + '%';
+    } else if (msg.type === 'progress') {
+      status.textContent = msg.text;
+    } else if (msg.type === 'error') {
+      status.textContent = 'Error: ' + msg.text;
+      go.disabled = false;
+      bar.style.width = '0';
+    } else if (msg.type === 'done' && live) {
+      ws.send(JSON.stringify({ type: 'done', name: msg.zipName }));
+      bar.style.width = '100%';
+      status.textContent = 'Sent ' + sent + ' files to desktop app: ' + msg.stats.frames + ' frames, ' + msg.stats.nodes + ' layers.';
+      if (msg.warnings && msg.warnings.length) warn.textContent = 'Warnings:\n' + msg.warnings.join('\n');
+      go.disabled = false;
+      setTimeout(function () { try { ws.close(); } catch (e) {} }, 500);
+    } else if (msg.type === 'done') {
+      status.textContent = 'Zip banavi rahyo chu...';
+      var blob = makeZip(files);
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = msg.zipName + '.zip';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      bar.style.width = '100%';
+      status.textContent = 'Done: ' + msg.stats.frames + ' frames, ' + msg.stats.nodes + ' layers, ' +
+        msg.stats.images + ' images, ' + files.length + ' files (' + (blob.size / 1048576).toFixed(1) + ' MB).';
+      if (msg.warnings && msg.warnings.length) warn.textContent = 'Warnings:\n' + msg.warnings.join('\n');
+      go.disabled = false;
+    }
+  };
+</script>
+</body>
+</html>

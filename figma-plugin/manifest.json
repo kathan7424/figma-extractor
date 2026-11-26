@@ -1,0 +1,14 @@
+{
+  "name": "Figma Export Kit",
+  "id": "figma-export-kit-local-dev",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "devAllowedDomains": ["ws://localhost:8787"],
+    "reasoning": "Optional live transfer to the Figma Export Kit desktop app on this computer only."
+  }
+}

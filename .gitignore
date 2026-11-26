@@ -1,0 +1,13 @@
+# generated outputs / client design data (never commit)
+_work/
+dist/
+*.zip
+# python / tools
+__pycache__/
+*.pyc
+.venv/
+.browsers/
+# local secrets (WordPress Application Passwords etc.)
+.env
+*.credentials
+.studio-test-credentials
